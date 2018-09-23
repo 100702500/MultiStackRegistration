@@ -78,6 +78,18 @@ public class Merview implements PlugIn  {
 		msPlugin.setSaveTransform(false);
 		msPlugin.setTransformation(Action);
 		
+		for(int i = Iterations; i >= 0; i--)
+		{
+			if(msPlugin.setTwoStackAlign(false))
+			{
+				msPlugin.setSrcImg(srcImg);
+				msPlugin.setTgtImg(tgtImg);
+				msPlugin.setSrcAction();
+				msPlugin.setTgtAction();
+
+				/*do we need to add imagecalculator into the class */
+			}
+		}
 		
 		
 		for (int i = Iterations;i >= 0; i--) {
