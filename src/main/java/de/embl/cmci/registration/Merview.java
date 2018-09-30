@@ -22,6 +22,7 @@ import java.util.Iterator;
 import ij.WindowManager;
 import ij.plugin.Slicer;
 import ij.process.ImageProcessor;
+import ij.plugin.ImageCalculator;
 
 import java.lang.String;
 
@@ -32,6 +33,7 @@ public class Merview implements PlugIn  {
 	private ImagePlus tgtImg;	
 	private int Action;
 	private int Iterations;
+	private ImageCalculator ic = new ImageCalculator();
 	
 
 	public void run (final String arg) {
@@ -45,48 +47,45 @@ public class Merview implements PlugIn  {
 		msPlugin.setSaveTransform(false);
 		msPlugin.setTransformation(Action);
 		
-		
-		ImagePlus srcImg2 = null;
-		ImagePlus tgtImg2 = null;
-		ImagePlus srcImg3 = null;
-		ImagePlus tgtImg3 = null;
-		
-		//iterate over all angles
-		for (int j = Iterations;j >= 0; j--) {
-			//need to apply changes made in lower loop to original image stack.
-			if (srcImg3 != null) {
-				srcImg = srcImg3;
-			}
-			if (tgtImg3 != null) {
-				tgtImg = tgtImg3;
-			}
-			for (int i = Iterations;i >= 0; i--) {
-				msPlugin.processDirectives(srcImg,false); //Align the current stack
-			}
-	
-			//rotate once
-			
-			srcImg2 = reslice.reslice(srcImg);
-			tgtImg2 = reslice.reslice(tgtImg);
-			msPlugin.setSrcImg(srcImg2);
-			msPlugin.setTgtImg(tgtImg2);
-			//register side
-			for (int i = Iterations;i >= 0; i--) {
-				msPlugin.processDirectives(srcImg,false); //Align the current stack
-			}
-			
-			//rotate second time
-			
-			srcImg3 = reslice.reslice(srcImg2);
-			tgtImg3 = reslice.reslice(tgtImg2);
-			msPlugin.setSrcImg(srcImg3);
-			msPlugin.setTgtImg(tgtImg3);
-			//register second side
-			for (int i = Iterations;i >= 0; i--) {
-				msPlugin.processDirectives(srcImg,false); //Align the current stack
-			}
+		for (int i = Iterations;i >= 0; i--) {
+			msPlugin.processDirectives(srcImg,false); //Align the current stack
 		}
-				
+		
+		
+		ImagePlus Aeoi1 = null;
+		ImagePlus Aeoi2 = null;
+		Aeoi1 = ic.run("Difference create", srcImg, tgtImg);
+		do {
+			registerdirection();
+			rotatebothstacks();
+			
+			registerdirection();
+			rotatebothstacks();
+						
+			registerdirection();
+			rotatebothstacks();
+
+			//Calculate the difference between the images
+			Aeoi2 = Aeoi1;
+			Aeoi1 = ic.run("Difference create", srcImg, tgtImg);
+		} while (!Aeoi1.equals(Aeoi2));
+		//If the difference between two images over two iterations then stop
+	
+	}
+	private void rotatebothstacks() {
+		srcImg = reslice.reslice(srcImg);
+		tgtImg = reslice.reslice(tgtImg);
+	}
+	
+	private void registerdirection() {
+		ImagePlus Beoi1 = null;
+		ImagePlus Beoi2 = null;
+		Beoi1 = ic.run("Difference create", srcImg, tgtImg);
+		do {
+			msPlugin.processDirectives(srcImg,false); //Align the current stack
+			Beoi2 = Beoi1;
+			Beoi1 = ic.run("Difference create", srcImg, tgtImg);
+		} while (!Beoi1.equals(Beoi2));
 	}
 	
 	private void dialog() {
