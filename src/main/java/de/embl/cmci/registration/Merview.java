@@ -36,7 +36,7 @@ public class Merview implements PlugIn  {
 	private ImageCalculator ic = new ImageCalculator();
 	
 
-	public void run (final String arg) {
+	public void run (final String arg) {	
 		dialog();
 		
 		msPlugin.setTwoStackAlign(true);      
@@ -46,35 +46,82 @@ public class Merview implements PlugIn  {
 		msPlugin.setTgtAction("Align to First Stack");
 		msPlugin.setSaveTransform(false);
 		msPlugin.setTransformation(Action);
-		
-		for (int i = Iterations;i >= 0; i--) {
-			msPlugin.processDirectives(srcImg,false); //Align the current stack
+
+		for (int i = Iterations;i > 0; i--) {
+			//register top
+
+			msPlugin.setSrcImg(srcImg);
+			msPlugin.setTgtImg(tgtImg);
+			registerdirectionforloop(Iterations);
+			rotatebothdown();
+			
+			//register front
+			msPlugin.setSrcImg(srcImg);
+			msPlugin.setTgtImg(tgtImg);
+			registerdirectionforloop(Iterations);
+			rotatebothdown();
+			rotatebothleft();
+			rotatebothdown();
+	
+			//register side
+			msPlugin.setSrcImg(srcImg);
+			msPlugin.setTgtImg(tgtImg);
+			registerdirectionforloop(Iterations);
+			rotatebothdown();
+			rotatebothleft();
+			rotatebothleft();
+			rotatebothleft();
+			//rotate back to top for next loop
 		}
 		
+		srcImg.show();
+		srcImg.draw();
+		tgtImg.show();
+		tgtImg.draw();
 		
+		/*
 		ImagePlus Aeoi1 = null;
 		ImagePlus Aeoi2 = null;
 		Aeoi1 = ic.run("Difference create", srcImg, tgtImg);
 		do {
 			registerdirection();
-			rotatebothstacks();
+			rotatebothstacks(1);
 			
 			registerdirection();
-			rotatebothstacks();
+			rotatebothstacks(1);
 						
 			registerdirection();
-			rotatebothstacks();
+			rotatebothstacks(1);
 
 			//Calculate the difference between the images
 			Aeoi2 = Aeoi1;
 			Aeoi1 = ic.run("Difference create", srcImg, tgtImg);
 		} while (!Aeoi1.equals(Aeoi2));
 		//If the difference between two images over two iterations then stop
+		 */
 	
 	}
-	private void rotatebothstacks() {
+
+	//get side view
+	private void rotatebothdown() {
 		srcImg = reslice.reslice(srcImg);
 		tgtImg = reslice.reslice(tgtImg);
+		//IJ.run(srcImg, "Reslice [/]...", "output=4.500 start=Top avoid");
+		//IJ.run(tgtImg, "Reslice [/]...", "output=4.500 start=Top avoid");
+		IJ.wait(1000);
+	}
+	//rotate the top of the image
+	private void rotatebothleft() {
+		IJ.doCommand(srcImg, "Rotate 90 Degrees Left");
+		IJ.doCommand(tgtImg, "Rotate 90 Degrees Left");
+		IJ.wait(1000);
+	}
+	//Temp Method
+	private void registerdirectionforloop(int iter) {
+		for (int i = iter;i > 0; i--) {
+			msPlugin.processDirectives(srcImg,false); //Align the current stack
+			IJ.wait(1000);
+		}
 	}
 	
 	private void registerdirection() {
