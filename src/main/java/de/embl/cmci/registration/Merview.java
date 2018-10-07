@@ -23,6 +23,7 @@ import ij.WindowManager;
 import ij.plugin.Slicer;
 import ij.process.ImageProcessor;
 import ij.plugin.ImageCalculator;
+import ij.plugin.ZProjector;
 
 import java.lang.String;
 
@@ -35,9 +36,13 @@ public class Merview implements PlugIn  {
 	private int Iterations;
 	private ImageCalculator ic = new ImageCalculator();
 	
+	//Zac Agius
+	//100702500
+	//7/10/18
 
 	public void run (final String arg) {	
 		dialog();
+		
 		
 		msPlugin.setTwoStackAlign(true);      
 		msPlugin.setSrcImg(srcImg);
@@ -47,18 +52,26 @@ public class Merview implements PlugIn  {
 		msPlugin.setSaveTransform(false);
 		msPlugin.setTransformation(Action);
 
+		
+		ImagePlus FOM1 = null;
+		ImagePlus FOM2 = null;
+		FOM1 = ic.run("Difference create stack", srcImg, tgtImg);
 		for (int i = Iterations;i > 0; i--) {
 			//register top
 
 			msPlugin.setSrcImg(srcImg);
 			msPlugin.setTgtImg(tgtImg);
 			registerdirectionforloop(Iterations);
+			srcImg = msPlugin.getSrcImg();
+			tgtImg = msPlugin.getTgtImg();
 			rotatebothdown();
 			
 			//register front
 			msPlugin.setSrcImg(srcImg);
 			msPlugin.setTgtImg(tgtImg);
 			registerdirectionforloop(Iterations);
+			srcImg = msPlugin.getSrcImg();
+			tgtImg = msPlugin.getTgtImg();
 			rotatebothdown();
 			rotatebothleft();
 			rotatebothdown();
@@ -67,11 +80,18 @@ public class Merview implements PlugIn  {
 			msPlugin.setSrcImg(srcImg);
 			msPlugin.setTgtImg(tgtImg);
 			registerdirectionforloop(Iterations);
+			srcImg = msPlugin.getSrcImg();
+			tgtImg = msPlugin.getTgtImg();
 			rotatebothdown();
 			rotatebothleft();
 			rotatebothleft();
 			rotatebothleft();
 			//rotate back to top for next loop
+			FOM2 = FOM1;
+			FOM1 = ic.run("Difference create stack", srcImg, tgtImg);
+			if (areequal(FOM1, FOM2)) {
+				break;
+			}
 		}
 		
 		srcImg.show();
@@ -102,6 +122,40 @@ public class Merview implements PlugIn  {
 	
 	}
 
+	private boolean areequal(ImagePlus img1, ImagePlus img2) {
+		int maxequalness = 2;
+		double imDoub1 = valueofimage(img1);
+		double imDoub2 = valueofimage(img2);
+		if (imDoub1 == imDoub2) {
+			return true;
+		}
+		//else {
+		//	IJ.error("Are not equal", String.valueOf(valueofimage(img2)) + " <Img 1:Img 2> " + String.valueOf(valueofimage(img1)));
+		//}
+		if (imDoub1 <= maxequalness && imDoub2 <= maxequalness) {
+			//if close to equal
+			return true;
+		}
+		return false;
+	}
+	
+	private double valueofimage(ImagePlus img1) {
+		double value = 0.0;
+		ZProjector Zproj = new ZProjector(img1);
+		Zproj.setMethod(ZProjector.AVG_METHOD);
+		Zproj.doProjection();
+		ImagePlus img2D = Zproj.getProjection();
+		ImageProcessor img2Dprocessor = img2D.getProcessor();
+		
+		for (int y = 0; y < img2Dprocessor.getHeight() -1; y++) {
+			for (int x = 0; x < img2Dprocessor.getWidth() - 1; x++) {
+				value += img2Dprocessor.getPixelValue(x, y);
+			}
+		}
+		value = value / img2Dprocessor.getPixelCount();
+		return value;
+	}
+
 	//get side view
 	private void rotatebothdown() {
 		srcImg = reslice.reslice(srcImg);
@@ -118,8 +172,18 @@ public class Merview implements PlugIn  {
 	}
 	//Temp Method
 	private void registerdirectionforloop(int iter) {
+		ImagePlus FOM1 = null;
+		ImagePlus FOM2 = null;
+		FOM1 = ic.run("Difference create stack", srcImg, tgtImg);
 		for (int i = iter;i > 0; i--) {
 			msPlugin.processDirectives(srcImg,false); //Align the current stack
+			srcImg = msPlugin.getSrcImg();
+			tgtImg = msPlugin.getTgtImg();
+			FOM2 = FOM1;
+			FOM1 = ic.run("Difference create stack", srcImg, tgtImg);
+			if (areequal(FOM1, FOM2)) {
+				break;
+			}
 			IJ.wait(1000);
 		}
 	}
@@ -127,11 +191,11 @@ public class Merview implements PlugIn  {
 	private void registerdirection() {
 		ImagePlus Beoi1 = null;
 		ImagePlus Beoi2 = null;
-		Beoi1 = ic.run("Difference create", srcImg, tgtImg);
+		Beoi1 = ic.run("Difference create stack", srcImg, tgtImg);
 		do {
 			msPlugin.processDirectives(srcImg,false); //Align the current stack
 			Beoi2 = Beoi1;
-			Beoi1 = ic.run("Difference create", srcImg, tgtImg);
+			Beoi1 = ic.run("Difference create stack", srcImg, tgtImg);
 		} while (!Beoi1.equals(Beoi2));
 	}
 	

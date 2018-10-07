@@ -2512,6 +2512,15 @@ public class MultiStackReg_
 			public void setTgtImg(ImagePlus tgtImg) {
 				this.tgtImg = tgtImg;
 			}
+			
+			
+			public ImagePlus getSrcImg() {
+				return srcImg;
+			}
+			
+			public ImagePlus getTgtImg() {
+				return tgtImg;
+			}
 
 			public void setTgtAction(String tgtAction) {
 				this.tgtAction = tgtAction;
