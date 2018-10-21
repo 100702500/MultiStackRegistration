@@ -34,193 +34,174 @@ public class crosssectPlugin implements PlugIn   {
 
 	@Override
 	public void run(String arg) {
-		// TODO Auto-generated method stub
-		showdialog();
+		//if theres an error selecting the files show that and stop
+		if (showdialoggetimages() == -1) {
+			IJ.error("Error selecting file");
+			return;
+		}
+		//if theres an error or cancled show that
+		if (showdialog(imp1.getDisplayRangeMax()) == -1) {
+			IJ.error("Error Cross secting");
+			return;
+		}
+		
+		//actual program function
 		function();
+		//show the result
 		ResultImage.draw();
 		ResultImage.show();
+		IJ.selectWindow(ResultImage.getTitle());
 	}
 	
+	
+	//select the range of values to display
 	private void Threshold() {
-		
+		//uses math>macro
+		//if the pixel value <= inputted min then the pixel value is set to 0
+		//same for the max
+		//applys to whole stack
 		String macro = "code=[if(v<=" + min + "){v=0;}else if(v>="+ max +"){v=0;}else{v=v;}] stack";
+		//run the macro
 		IJ.run(ResultImage, "Macro...", macro);
+		//draw the result
 		ResultImage.draw();
-		/* OLD implementations Kept incase need of use
-		
-		//needs to be temp and revert once returned value
-		//still needs to display so that it can be used for preview
-		//String macro = "if(v<=" + min + "){v=0;}else if(v>="+ max +"){v=0;}else{v=v;}";
-		//for (int i=1 ; i<=imp1.getImageStackSize() ; i++) {
-		//	ImageMath.applyMacro(imp1.getImageStack().getProcessor(i), ( macro ), false);
-		//}
-		//ImageMath.applyMacro(imp1.getProcessor(), macro, true);
-		//ImageProcessor temp = imp1.getProcessor();
-		//temp.applyMacro(macro);
-		//temp.setThreshold(min, max, 0);
-		//ResultImage.draw();
-		 	val = "code=[if(v<=" + minval + "){v=0;}else if(v>="+ maxval +"){v=0;}else{v=v;}] stack";
-			run("Macro...", val);
-			run("Make Binary", "method=Huang background=Default calculate black");
-			run("Divide...", "value=255 stack");
-			
-			
-		 */
+		IJ.selectWindow(ResultImage.getTitle());
 	}
 	
 	private void function() {
+		//apply the threshold range
 		Threshold();
+		//set the result of the threshold as a temp file
 		ImagePlus temp = new Duplicator().run(ResultImage);
-		
-		IJ.run(temp, "Make Binary", "method=Huang background=Default calculate black");
-		
-		IJ.run(temp, "Divide...", "value=255 stack");
-		temp.draw();
-		temp.show();
+		//delete the result image
 		ResultImage.draw();
 		ResultImage.show();
 		ResultImage.changes = false;
 		ResultImage.close();
+		
+		//make the temp res image binary that is (0 or 255)
+		//uses the Huang method
+		IJ.run(temp, "Make Binary", "method=Huang background=Default calculate black");
+		
+		//makes the temp image either 1 or 0
+		IJ.run(temp, "Divide...", "value=255 stack");
+		//darw show temp
+		//this shows that somthing has happened and is useful in testing
+		temp.draw();
+		temp.show();
+
+		//get the value from the second image
+		//by multipling the second with the temp
+		//as the values are 0 or 1. 1 will keep the value from the second image, 0 will make it 0.
+		//set this result as result image
 		ResultImage = ic.run("Multiply create 32-bit stack", imp2, temp);
+		//make sure that the temp is deleted
 		temp.setTitle("SHOULD BE DELETED");
 		temp.changes = false;
 		temp.close();
 		
-		//ImagePlus tempres = new ImagePlus("Binary image convert", Threshold());
-		//IJ.run(tempres, "Divide...", "value=255 stack");
-		//ImagePlus result = ic.run("Multiply create 32-bit stack", imp2, tempres);
-		//return result;
 	}
-	/*
-	private void dialog() {
+	
+	private int showdialoggetimages() {
 		//list is using an object of the registration class, should not
-		admissibleImageList = msPlugin.createAdmissibleImageList();
-		sourceNames = new String[1+admissibleImageList.length];
-		sourceNames[0]="None";
-		for (int k = 0; (k < admissibleImageList.length); k++) {
-			sourceNames[k+1]=admissibleImageList[k].getTitle();
-		}
-	
-		GenericDialog gd = new GenericDialog("Create Cross-Sect");
-		gd.addChoice("Image 1: Apply Range to", sourceNames, admissibleImageList[0].getTitle());
-		gd.addNumericField("Min:", 0, 0);
-		gd.addNumericField("Max:", 255, 0);
-		gd.addChoice("Image 2: Get Data From", sourceNames, admissibleImageList[1].getTitle());
-		gd.showDialog();
-		if (gd.wasCanceled()) {
-			return;
-		}
-		
-		int tmpIndex=gd.getNextChoiceIndex();
-		imp1=null;
-		if (tmpIndex > 0){
-			imp1 = admissibleImageList[tmpIndex-1];
-		}
-		tmpIndex=gd.getNextChoiceIndex();
-		imp2=null;
-		if (tmpIndex > 0){
-			imp2 = admissibleImageList[tmpIndex-1];
-		}
-		min = (int) gd.getNextNumber();
-		max = (int) gd.getNextNumber();
-
-	
-	}
-	*/
-	private void showdialog() {
-		//list is using an object of the registration class, should not
-		admissibleImageList = msPlugin.createAdmissibleImageList();
-		sourceNames = new String[1+admissibleImageList.length];
-		sourceNames[0]="None";
-		for (int k = 0; (k < admissibleImageList.length); k++) {
-			sourceNames[k+1]=admissibleImageList[k].getTitle();
-		}
-	
-		GenericDialog gd = new GenericDialog("Create Cross-Sect");
-		gd.addChoice("Image 1: Apply Range to", sourceNames, admissibleImageList[0].getTitle());
-		Choice imChoice = (Choice)(gd.getChoices().get(0));
-		imChoice.addItemListener(new ItemListener() {
-			public void itemStateChanged(ItemEvent e) {
-				int tmpIndex=imChoice.getSelectedIndex();
-				imp1=null;
-				if (tmpIndex > 0){
-					imp1 = admissibleImageList[tmpIndex-1];
-				}
+		//this gets a list of all images
+			admissibleImageList = msPlugin.createAdmissibleImageList();
+			sourceNames = new String[1+admissibleImageList.length];
+			sourceNames[0]="None";
+			for (int k = 0; (k < admissibleImageList.length); k++) {
+				sourceNames[k+1]=admissibleImageList[k].getTitle();
 			}
-		});
-		gd.addSlider("Min", 0, 1000, 0);
+		//generate the dialog window
+			GenericDialog gd = new GenericDialog("Select Images Cross-Sect");
+			//name of choice, choice options, currently selected value
+			gd.addChoice("Image 1: Apply Range to", sourceNames, admissibleImageList[0].getTitle());
+			gd.addChoice("Image 2: Get Data From", sourceNames, admissibleImageList[1].getTitle());
+			gd.showDialog();
+			if (gd.wasCanceled()) {
+				//if it failed or canceled then it should return somthing so that the main can stop
+				return -1;
+			}
+			
+			//sets the choices as variables
+			int tmpIndex=gd.getNextChoiceIndex();
+			imp1=null;
+			if (tmpIndex > 0){
+				imp1 = admissibleImageList[tmpIndex-1];
+			}
+			tmpIndex=gd.getNextChoiceIndex();
+			imp2=null;
+			if (tmpIndex > 0){
+				imp2 = admissibleImageList[tmpIndex-1];
+			}
+			return 0;
+	}
+	
+	
+	
+	
+	
+	private int showdialog(double max1) {
+		//list is using an object of the registration class, should not
+		//same as above
+		admissibleImageList = msPlugin.createAdmissibleImageList();
+		sourceNames = new String[1+admissibleImageList.length];
+		sourceNames[0]="None";
+		for (int k = 0; (k < admissibleImageList.length); k++) {
+			sourceNames[k+1]=admissibleImageList[k].getTitle();
+		}
+	
+		GenericDialog gd = new GenericDialog("Create Cross-Sect");
+		//the mix slider
+		gd.addSlider("Min", 0, max1, 0);
 		Scrollbar minslider = (Scrollbar)(gd.getSliders().get(0));
+		//not actualy needed to have a listener
 		minslider.addAdjustmentListener(new AdjustmentListener() {
 			public void adjustmentValueChanged(AdjustmentEvent ae) {
 				min = ae.getValue();
 			}
 		});
-		gd.addSlider("Max", 0, 1000, 0);
+		gd.addSlider("Max", 0, max1, 0);
+		//not actualy needed to have a listener
 		Scrollbar maxslider = (Scrollbar)(gd.getSliders().get(1));
 		maxslider.addAdjustmentListener(new AdjustmentListener() {
 			public void adjustmentValueChanged(AdjustmentEvent ae) {
 				max = ae.getValue();
 			}
 		});
-		gd.addChoice("Image 2: Get Data From", sourceNames, admissibleImageList[1].getTitle());
-		Choice im2Choice = (Choice)(gd.getChoices().get(1));
-		im2Choice.addItemListener(new ItemListener() {
-			public void itemStateChanged(ItemEvent e) {
-				int tmpIndex=im2Choice.getSelectedIndex();
-				imp2=null;
-				if (tmpIndex > 0){
-					imp2 = admissibleImageList[tmpIndex-1];
-				}
-			}
-		});
+		//the checkbox will activate the threshold using the current values
+		//and display that as a preview
+		//is possible to change to a button instead of a checkbox
 		gd.addCheckbox("Change (ACT AS BUTTON)", false);
 		Checkbox c = (Checkbox) gd.getCheckboxes().get(0);
         c.addItemListener(new ItemListener() {
 			@Override
 			public void itemStateChanged(ItemEvent e) {
 				// TODO Auto-generated method stub
-				IJ.error("Action Fired");
-				int tmpIndex=imChoice.getSelectedIndex();
-				imp1=null;
-				if (tmpIndex > 0){
-					imp1 = admissibleImageList[tmpIndex-1];
-				}
-				tmpIndex=im2Choice.getSelectedIndex();
-				imp2=null;
-				if (tmpIndex > 0){
-					imp2 = admissibleImageList[tmpIndex-1];
-				}
-				
-				
-				
 				min = minslider.getValue();
 				max = maxslider.getValue();
 				cpyimp1toresults();
 				Threshold();
+				//makes the window come to the front so it is viewable
+				IJ.selectWindow(ResultImage.getTitle());
 			}
         });
+        //if fail return it
 		gd.showDialog();
 		if (gd.wasCanceled()) {
-			return;
+			return -1;
 		}
 		
-		int tmpIndex=gd.getNextChoiceIndex();
-		imp1=null;
-		if (tmpIndex > 0){
-			imp1 = admissibleImageList[tmpIndex-1];
-		}
-		tmpIndex=gd.getNextChoiceIndex();
-		imp2=null;
-		if (tmpIndex > 0){
-			imp2 = admissibleImageList[tmpIndex-1];
-		}
+		//set choices as results
 		min = (int) gd.getNextNumber();
 		max = (int) gd.getNextNumber();
 		
+		//ResultImage is set to a copy of image1
 		cpyimp1toresults();
-	
+		return 0;
 	}
 	
+	//This copys image1 to a new resultvariable
+	//this is done to make sure that the original images are not altered
 	private void cpyimp1toresults() {
 		if (ResultImage != null) {
 			ResultImage.changes = false;
@@ -228,7 +209,7 @@ public class crosssectPlugin implements PlugIn   {
 		}
 		ResultImage = new Duplicator().run(imp1);
 		ResultImage.show();
-		ResultImage.setTitle("Result of " + imp1.getTitle());
+		ResultImage.setTitle("Preview of " + imp1.getTitle());
 		IJ.selectWindow(ResultImage.getTitle());
 	}
 }
